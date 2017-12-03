@@ -26,6 +26,10 @@ class Character_CNN(nn.Module):
     def __init__(self, vocab_size, embed_dim, num_filters, filter_sizes):
         super(Character_CNN, self).__init__()
         self.embedding = nn.Embedding(vocab_size, embed_dim)
+        # embed_dim = vocab_size
+        # self.embedding = nn.Embedding(vocab_size, embed_dim)
+        # self.embedding.weight.data.copy_(torch.eye(vocab_size))
+        # self.embedding.weight.requires_grad = False
         self.convs = nn.ModuleList([nn.Conv1d(in_channels=embed_dim, out_channels=num_filters, kernel_size=k, padding=k-1) for k in filter_sizes])
 
     def forward(self, x):
@@ -43,7 +47,7 @@ class Word_LSTM(nn.Module):
 
     def __init__(self, input_dim, output_dim):
         super(Word_LSTM, self).__init__()
-        self.lstm = nn.RNN(input_dim, output_dim/2, batch_first=True, bidirectional=True)
+        self.lstm = nn.RNN(input_dim, int(output_dim/2), batch_first=True, bidirectional=True)
         # self.lstm = nn.LSTM(input_dim, output_dim, batch_first=True, bidirectional=False)
 
     def forward(self, x):
@@ -86,6 +90,8 @@ class GNN_Layer(nn.Module):
                 n = mask.sum()
                 h_g = mask.view(1,-1).matmul(F.relu(self.linear_g(x))) / n
                 h = h + self.linear_go(h_g).expand(x.size(0), h_g.size(1))
+                # h_g = self.linear_g(mask.view(1,-1).matmul(x) / n)
+                # h = h + h_g.expand(x.size(0), h.size(1))
         else:
             h_ud = torch.mm(a_ud, x)
             h = self.linear(x) + self.linear_ud(h_ud)

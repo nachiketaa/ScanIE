@@ -3,10 +3,12 @@ import os
 import json
 import torch
 import numpy as np
+import random
 
 vocab = ' ' + string.ascii_letters + string.digits + string.punctuation
 vocab_size = len(vocab)
 character2id = {c:idx for idx, c in enumerate(vocab)}
+
 
 class DataPoint():
 
@@ -21,10 +23,12 @@ class DataPoint():
         word_feat = []
         tags = []
         G = {'lr':[], 'ud':[]}
-        for l in file(graph_filename):
+        for l in open(graph_filename):
             a = l.strip().split(' ')
             if l[0] != '#':
                 label = a[0]
+                # if label not in ['PtFN','PtLN']:
+                #     label = 'O'
                 if label not in label2id:
                     label2id[label] = len(label2id)
                 tags.append(label2id[label])
@@ -44,7 +48,7 @@ class DataPoint():
                 typ = a[3]
                 G[typ].append((u,v,w))
                 G[typ].append((v,u,w))
-        
+
         self.max_word_len = max([len(w) for w in words])
         self.max_sent_len = max([len(s) for s in sents])
         self.num_sent = len(sents)
@@ -101,10 +105,10 @@ class DataPoint():
         for label in label2id: # ['PtFN','PtLN']:#
             if label2id[label] not in tags:
                 self.valid = False
-                try:
-                    print self.set_id, self.fax_id, label, obj['attrs']['Physician (Last Name,  First Name Mid Intial)']
-                except:
-                    pass
+                # try:
+                #     print self.set_id, self.fax_id, label, obj['attrs']['Physician (Last Name,  First Name Mid Intial)']
+                # except:
+                #     pass
 
 
 
@@ -120,7 +124,7 @@ class DataSet():
             name, ext = os.path.splitext(filename)
             if ext != '.json':
                 continue
-            f = file(os.path.join(data_path, filename))
+            f = open(os.path.join(data_path, filename))
             for line in f:
                 obj = json.loads(line)
                 set_id = obj['set_id']
@@ -128,20 +132,9 @@ class DataSet():
                 graph_filename = os.path.join(graph_path, str(set_id), str(fax_id) + '.txt')
                 if not os.path.isfile(graph_filename):
                     continue
-                # if set_id not in [14, 21]:
-                #     continue
                 x = DataPoint(obj, graph_filename, self.label2id)
                 if x.valid:
                     self.data.append(x)
-            # if set_id <= 20:
-            #     train.extend(data)
-            # elif set_id <= 20:
-            #     train.extend(data[:len(data)/2]) 
-            #     test.extend(data[len(data)/2:])
-            # else:
-            #     if set_id == 22:
-            #         continue
-            #     test.extend(data)
 
         self.train = self.data
         self.valid = []
@@ -153,9 +146,14 @@ class DataSet():
     def split_train_valid_test(self, ratio, split, offset):
         n = len(self.data)
         if self.order == None:
+            # random.seed(0)
+            # self.order = list(range(n))
+            # random.shuffle(self.order)
             p = 9369319
             self.order = [i*p%n for i in range(n)]
-        order = self.order[n*offset/split:n] + self.order[:n*offset/split]
+            # print(self.order)
+
+        order = self.order[int(n*offset/split):n] + self.order[:int(n*offset/split)]
         train_size = int(n*ratio[0])
         valid_size = int(n*ratio[1])
         self.train = [self.data[i] for i in order[:train_size]]
@@ -171,8 +169,8 @@ class DataSet():
         self.train = [x for x in self.data if x.set_id in train_set]
         self.valid = [x for x in self.data if x.set_id in valid_set]
         self.test = [x for x in self.data if x.set_id in test_set]
-        print 'valid', list(valid_set)
-        print 'test', list(test_set)
+        print('valid', list(valid_set))
+        print('test', list(test_set))
 
 
 
